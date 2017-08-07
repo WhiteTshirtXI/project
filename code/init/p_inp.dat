@@ -1,0 +1,17 @@
+# num_sphere_A  num_sphere_B  nlevel_A  nlevel_B  max_x  max_y  max_z
+  0             0             -1         2         16     16     16
+# spring_type(0=FENE,1=WLC,2=harmonic)  ev_type(0=HS,1=WCA,2=gaussian)  verlet_type(0=1storder,1=2ndorder)  initconfig(1=random,4=file)
+  2                                     0                                1                                  2
+# H_fene_A  H_fene_B  Q_fene_A  Q_fene_B  kuhn_length  nks    k_bend_A  k_bend_B  k_V_A  k_V_B  k_A_A  k_A_B  ka_local
+  7.2746      0         3.0       3.0       0.212     19.8    0.24       0         0      0      0      0    0 
+# evcutoff  fric  dt    mon_mass  kT    epsilon_LJ    cutoff_LJ    epsilon_LJ_final    cutoff_LJ_final    eq_LJ    eps_WCA  eq_WCA  eps_overlap  eq_overlap
+  5.0       1.57   0.1    1.0     1.0   1.0           2.5          1.0                 2.5                1.0      0.048     0.5       10.0          0.55
+# attrac_type  attrac_type_1  eq_morse  depth_morse  width_morse  cutoff_morse
+  0            4              0.5       0.0162          1.5          1.83
+# mon_fext
+0.0 0.0 0.0
+# write_props  write_config  write_fluid    WriteStress
+  1000           1000          1000           5000 
+# RetrieveFlowStep
+  500
+
