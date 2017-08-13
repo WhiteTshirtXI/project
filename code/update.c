@@ -327,30 +327,11 @@ if(n_step > 5000) // Modification 20170802: Temporary!!!
 
 
     Write_Output (n_step, n_cycle, num_step, mark_interval, oscillation_period, window, 
-                  num_sph, objects, spheres, monomers, faces, sphere_pm,velcs_df, 
-                  node_map, work_dir);
-//		//-----------------------------------------------------  
-//		// Main LBE update routine for particle and fluid moves 
-//		//-----------------------------------------------------
-//		double fluidStress_pre[6]={0,0};
-//		double fluidStress_pos[6]={0,0};
-//		lbe_update(objects, sphere_pm, spheres, monomers, velcs_df, node_map, f_tot, &p_lbe, 
-//				sum_y, num_step, n_step, file_ptr, rngstream, fluidStress_pre, 
-//				fluidStress_pos); 
-//		//-----------------------------  
-//		// Update polymer beads with MD 
-//		//-----------------------------
-//		if(sphere_pm->Nsphere > 0) 
-//		{
-//			for(n=0; n< sphere_pm->MD_steps; n++) 
-//				verlet_update(monomers, faces, sphere_pm, velcs_df, n_step, rngstream);
-//			sync_procs();
-//		}
-////    if(n_step % 500 == 0)
-////      WriteForce(n_step, sphere_pm, monomers, work_dir);
-//		WallStress(n_step, objects[num_sph+1].u, velcs_df, work_dir, writeInterval_stress);
-//		WriteParticleStress(n_step, writeInterval_stress, sphere_pm, monomers, work_dir, 
-//                        fluidStress_pre, fluidStress_pos);
+    num_sph, objects, spheres, monomers, faces, sphere_pm,velcs_df, node_map, work_dir);
+
+    if(n_step % 10000==0)                                  // Modification 20170811
+      WriteForce (n_step, sphere_pm, monomers, work_dir);
+
     get_forces (sphere_pm,monomers,faces,velcs_df,n_step,rngstream);
     spreading (forceDen,monomers,sphere_pm->num_beads);
     bnodes_dp (node_map,sphere_pm,spheres,monomers); 

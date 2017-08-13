@@ -122,7 +122,6 @@ struct monomer                                   /* monomers */
   double force_spring[DIMS];
   double force_vol[DIMS];
   double force_bend[DIMS];
-  double force_area[DIMS];
   double force_ev[DIMS];
   double force_wall[DIMS];
   double force_fluc[DIMS];
@@ -130,7 +129,6 @@ struct monomer                                   /* monomers */
   double stress_elas[3][3];
   double stress_bend[3][3];
   double stress_vol[3][3];
-  double stress_area[3][3];
   double stress_wall[3][3];
   double stress_int_v1[3][3];
   double stress_int_v2[3][3];
@@ -140,6 +138,13 @@ struct monomer                                   /* monomers */
   double force_nonbonded_intra[3];
   double vel_old[3];
   int updatedFlag;  // Modification 20170725
+  double force_areaL[3];
+  double force_areaG[3];
+  double force_inter[3];
+  double force_interA[3];
+  double force_interR[3];
+  double stress_areaL[3][3];
+  double stress_areaG[3][3];
 };
 
 struct face
