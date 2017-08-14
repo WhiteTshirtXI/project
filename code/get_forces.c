@@ -1248,17 +1248,18 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
 
   double forceA=0., forceR=0., forceR_morse=0., forceR_wca=0.;
   int counterA=0, counterR=0, counterR_morse=0, counterR_wca=0;  
-
 	int num_beads = sphere_pm->num_beads;
+  double shortestDis[num_beads];
+ 
   for(int n1=0; n1 < num_beads; n1++) 
   {
+    shortestDis[n1]=100.; 
 		for(int neighbor=1; neighbor <= monomers[n1].list[0]; neighbor++) 
     {
       int n2 = monomers[n1].list[neighbor];
       if(monomers[n1].sphere_id != monomers[n2].sphere_id)
       {
-        double q12[3], q12mag=0.;
-        double force[3]={0.};    
+        double q12[3], q12mag=0., force[3]={0.};    
 			  // calculate the monomer-monomer distance
 			  for(int j=0; j < DIMS; j++) {
 				  q12[j] = monomers[n1].pos_pbc[j] - monomers[monomers[n1].list[neighbor]].pos_pbc[j];
@@ -1268,6 +1269,7 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
 				  q12mag += q12[j]*q12[j];
 			  }	
 			  q12mag = sqrt(q12mag);
+        if(q12mag<shortestDis[n1])  shortestDis[n1]=q12mag;
 
         if(sphere_pm->attrac_type == 0) // WCA; For generating a initial configuration
         { 
@@ -1294,10 +1296,7 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
 			  }
         else if(sphere_pm->attrac_type == 1) // LJ potential
         {
-          if(q12mag >= cutoff_LJ) {
-            force[0] = 0.;  force[1]=0.;  force[2]=0.;
-          }
-          else//else if(q12mag < cutoff_LJ) 
+          if(q12mag < cutoff_LJ) 
           {
             double aterm = sigma_attrac / q12mag;
             aterm = aterm*aterm*aterm*aterm*aterm*aterm;
@@ -1334,8 +1333,8 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
           //  force[0]=0.;  force[1]=0.;  force[2]=0.;
           //}
         }
-        else if(sphere_pm->attrac_type ==3) // blend of LJ and Morse potentials Revision needed!!!
-        {
+        else if(sphere_pm->attrac_type ==3) // blend of LJ and Morse potentials
+        {                                   // Note 20170814: Revision needed!
           double dr = q12mag - r0;
           double beta_dr = beta*dr;
           if(q12mag > cutoff_morse) {
@@ -1394,11 +1393,10 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
             if(q12mag < r0) {
               double magnitude = sqrt(iproduct(forceTemp,forceTemp));
               forceR_morse += magnitude;
-              forceR += magnitude; 
               counterR_morse++;
+              forceR += magnitude; 
             }
-            else
-            {
+            else {
               forceA += sqrt(iproduct(forceTemp,forceTemp));
               counterA++; 
             }
@@ -1424,8 +1422,8 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
             // Record force magnitude
             double magnitude=sqrt(iproduct(forceTemp,forceTemp));
             forceR_wca += magnitude;
-            forceR += magnitude;
             counterR_wca++;
+            forceR += magnitude;
             counterR++;
 				  }
 				  //else { 
@@ -1483,21 +1481,26 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
       }
 	  }
   }
+
   // Record force magnitudes
-  if(counterR>0) {
-    forceR /= counterR;
-    forceR_wca /= counterR_wca;
-  }
-  if(counterR_morse>0)
-    forceR_morse /= counterR_morse;
-  if(counterA>0)
-    forceA /= counterA; 
+  if(forceR>0)  forceR /= counterR;
+  if(forceR_wca>0)  forceR_wca /= counterR_wca;
+  if(forceR_morse>0) forceR_morse /= counterR_morse;
+  if(forceA>0) forceA /= counterA; 
   if(counterR>0 || counterA>0) {  // Modification 20170811
     sprintf(fileName,"%s/data/interPartForce.dat",work_dir);
     stream=fopen(fileName,"a");
     fprintf(stream,"%f    %f    %f    %f\n",forceA,forceR,forceR_wca,forceR_morse);
     fclose(stream);
   }
+
+  // write shortest distance between vertices on different particles 
+  sprintf(fileName,"%s/data/shortestDis.dat",work_dir);
+  stream=fopen(fileName,"a");
+  for(int n=0; n<num_beads; n++)
+    fprintf(stream,"%f ",shortestDis[n]);
+  fprintf(stream,"\n");
+  fclose(stream);
 }
 
 void nonbonded_interaction_nlist(struct sphere_param *sphere_pm, struct monomer *monomers)
