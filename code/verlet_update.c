@@ -243,6 +243,16 @@ void update_position (int numBead, double dt, struct monomer *mon)
       mon[n].vel_old[2] = mon[n].vel[2];
     }
     //mon[n].updatedFlag = FALSE;  // Modification 20170723 move to get_force.c
+    // Modification 20170818
+    else
+    {
+      for(int d=0; d<3; d++) {
+        mon[n].vel[d]=mon[n].vel_temp[d];
+        mon[n].pos_pbc[d]=mon[n].pos_temp[d];
+        mon[n].pos[d]=box(mon[n].pos_pbc[d],maxsize[d]);
+        mon[n].vel_old[d]=mon[n].vel[d];
+      }
+    }
   }
 }
 

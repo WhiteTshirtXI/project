@@ -92,8 +92,9 @@ struct monomer                                   /* monomers */
   double pos_old[DIMS];                          /* pbc monomer pos */
   double pos_tmp[DIMS];                          /* pbc monomer pos */
   double dr2;                                    /* pbc monomer displacement */
-
+  double pos_temp[DIMS];                         // Modification 20170818
   double vel[DIMS];                              /* monomer velocity */
+  double vel_temp[DIMS];                         // Modification 20170818
   double force[DIMS];                            /* monomer force */
   double force0[DIMS];
   double fricforce[DIMS];                        /* friction force on the monomer */

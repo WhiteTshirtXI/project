@@ -1491,10 +1491,9 @@ void preclude_penetraction(struct sphere_param *sphere_pm, struct monomer *monom
                 {
                   v_prime[d] = (1-zeta-xi)*monomers[n2].vel[d] + 
                                zeta*monomers[vertex1].vel[d] + xi*monomers[vertex0].vel[d];
-                  monomers[n1].vel[d] = 2*v_prime[d] - monomers[n1].vel[d];
-                  monomers[n1].pos_pbc[d] = n1_pos_pbc[d] + (dt-t_prime)*monomers[n1].vel[d];
-                  monomers[n1].pos[d] = box(monomers[n1].pos_pbc[d], maxsize[d]);
-                  monomers[n1].vel_old[d] = monomers[n1].vel[d];
+                  monomers[n1].vel_temp[d] = 2*v_prime[d] - monomers[n1].vel[d];
+                  monomers[n1].pos_temp[d] = n1_pos_pbc[d] + (dt-t_prime) *
+                                             monomers[n1].vel_temp[d];
                 } 
                 // label n1
                 monomers[n1].updatedFlag=TRUE;
