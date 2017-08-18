@@ -1345,6 +1345,11 @@ void preclude_penetraction(struct sphere_param *sphere_pm, struct monomer *monom
   int totalBead = sphere_pm->num_beads;
   for(int n1=0; n1 < totalBead; n1++) 
   {
+    /* Note 20170726: make # of neighbors in a reasonable range
+       Might need to modify the code of the neighbor list 
+    */
+    int breakFlag=FALSE;  // Modification 20170818
+
     int numNeighbor = monomers[n1].list[0];
     double dis[numNeighbor];
     int label[numNeighbor];
@@ -1363,133 +1368,146 @@ void preclude_penetraction(struct sphere_param *sphere_pm, struct monomer *monom
       dis_temp = sqrt(dis_temp);
       dis[index-1] = dis_temp;      
     }
-
     sort_label(dis,label);
 
-    int top6=6;
-    int temp;
-    if(numNeighbor<top6) temp=numNeighbor;  // Note 20170726: make # of neighbors in a reasonable range
-    else                 temp=top6;         // might need to modify the code of the neighbor list
-
+    int top6=6, temp;       
+    if(numNeighbor<top6) temp=numNeighbor;  
+    else                 temp=top6;         
     for(int neighbor=0; neighbor<temp; neighbor++)
     {
-      int n2 = label[neighbor];
-      if(monomers[n1].sphere_id != monomers[n2].sphere_id)
+      if(breakFlag == TRUE) // Modification 20170818
+        break;
+      else 
       {
-        for(int index=1; index <= monomers[n2].Blist[0][0]; index++) // bond label starts from 1
+        int n2 = label[neighbor];
+        if(monomers[n1].sphere_id != monomers[n2].sphere_id)
         {
-          int faceLabel = monomers[n2].faceList[index];
-          //n2 = faces[faceLabel].vertices[0]
-//          int vertex0 = faces[faceLabel].vertices[1];
-//          int vertex1 = faces[faceLabel].vertices[2];
-int vertex0 = monomers[n2].Blist[index][0];
-int vertex1 = monomers[n2].Blist[index][1];
-          double bond0[3], bond1[3], faceNormal[3], r[3]; 
-          bond1[0] = monomers[vertex1].pos_pbc[0] - monomers[n2].pos_pbc[0];
-          bond1[1] = monomers[vertex1].pos_pbc[1] - monomers[n2].pos_pbc[1];
-          bond1[2] = monomers[vertex1].pos_pbc[2] - monomers[n2].pos_pbc[2];
-          bond0[0] = monomers[vertex0].pos_pbc[0] - monomers[n2].pos_pbc[0];
-          bond0[1] = monomers[vertex0].pos_pbc[1] - monomers[n2].pos_pbc[1];
-          bond0[2] = monomers[vertex0].pos_pbc[2] - monomers[n2].pos_pbc[2];
-          product(bond1,bond0,faceNormal);
-          r[0] = monomers[n1].pos_pbc[0] - monomers[n2].pos_pbc[0];
-          r[1] = monomers[n1].pos_pbc[1] - monomers[n2].pos_pbc[1];
-          r[2] = monomers[n1].pos_pbc[2] - monomers[n2].pos_pbc[2];
-          // consider the periodic image
-          if(wall_flag < 3)    r[0] = n_image(r[0],maxsize[0]);
-          if(wall_flag < 2)    r[2] = n_image(r[2],maxsize[2]);
-          if(wall_flag < 1)    r[1] = n_image(r[1],maxsize[1]);
-          double b0 = iproduct(r,faceNormal);
-//printf("faceLabel:%d\n",faceLabel);
-//printf("(n2, vertex0, vertex1)=(%d, %d, %d)\n",n2,vertex0,vertex1);
-//printf("n1=(%le, %le, %le)\n",monomers[n1].pos_pbc[0],monomers[n1].pos_pbc[1],monomers[n1].pos_pbc[2]);
-//printf("n2=(%le, %le, %le)\n",monomers[n2].pos_pbc[0],monomers[n2].pos_pbc[1],monomers[n2].pos_pbc[2]);
-//printf("vertex0=(%le, %le, %le)\n",monomers[vertex0].pos_pbc[0],monomers[vertex0].pos_pbc[1],monomers[vertex0].pos_pbc[2]);
-//printf("vertex1=(%le, %le, %le)\n",monomers[vertex1].pos_pbc[0],monomers[vertex1].pos_pbc[1],monomers[vertex1].pos_pbc[2]);
-//          // vertex positions at the next time step
-          double n1_pos_pbc[3], n2_pos_pbc[3], vertex1_pos_pbc[3], vertex0_pos_pbc[3]; 
-          for(int d=0; d<3; d++)
-          { 
-            n2_pos_pbc[d] = monomers[n2].pos_pbc[d] + monomers[n2].vel[d]*dt;
-            vertex0_pos_pbc[d] = monomers[vertex0].pos_pbc[d] + monomers[vertex0].vel[d]*dt;
-            vertex1_pos_pbc[d] = monomers[vertex1].pos_pbc[d] + monomers[vertex1].vel[d]*dt;
-            n1_pos_pbc[d]      = monomers[n1].pos_pbc[d]      + monomers[n1].vel[d]*dt;
-            bond1[d] = vertex1_pos_pbc[d] - n2_pos_pbc[d];
-            bond0[d] = vertex0_pos_pbc[d] - n2_pos_pbc[d];
-          }
-          product(bond1,bond0,faceNormal);
-          r[0] = n1_pos_pbc[0] - n2_pos_pbc[0];//monomers[n2].pos_pbc[0];        
-          r[1] = n1_pos_pbc[1] - n2_pos_pbc[1];//monomers[n2].pos_pbc[1];        
-          r[2] = n1_pos_pbc[2] - n2_pos_pbc[2];//monomers[n2].pos_pbc[2];
-          // consider periodic image
-          if(wall_flag < 3)    r[0] = n_image(r[0],maxsize[0]);
-          if(wall_flag < 2)    r[2] = n_image(r[2],maxsize[2]);
-          if(wall_flag < 1)    r[1] = n_image(r[1],maxsize[1]);
-          double b1 = iproduct(r,faceNormal);
-
-          if(b0*b1<=0.)      
+          // bond label starts from 1
+          for(int index=1; index <= monomers[n2].Blist[0][0]; index++)         
           {
-//printf("b0=%le;  b1=%le\n",b0,b1);
-//PAUSE
-            // predict the time at which the vertex bounds the face 
-            double t_prime = rtsafe(0.,1.,10e-4,monomers[n1],monomers[n2],
-                             monomers[vertex0],monomers[vertex1]);
-// Modification 20170726: TEST
-
-//printf("t_prime=%le\n",t_prime);
-
-            double g[3];
+            int faceLabel = monomers[n2].faceList[index];
+            //n2 = faces[faceLabel].vertices[0]
+  //          int vertex0 = faces[faceLabel].vertices[1];
+  //          int vertex1 = faces[faceLabel].vertices[2];
+  int vertex0 = monomers[n2].Blist[index][0];
+  int vertex1 = monomers[n2].Blist[index][1];
+            double bond0[3], bond1[3], faceNormal[3], r[3]; 
+            bond1[0] = monomers[vertex1].pos_pbc[0] - monomers[n2].pos_pbc[0];
+            bond1[1] = monomers[vertex1].pos_pbc[1] - monomers[n2].pos_pbc[1];
+            bond1[2] = monomers[vertex1].pos_pbc[2] - monomers[n2].pos_pbc[2];
+            bond0[0] = monomers[vertex0].pos_pbc[0] - monomers[n2].pos_pbc[0];
+            bond0[1] = monomers[vertex0].pos_pbc[1] - monomers[n2].pos_pbc[1];
+            bond0[2] = monomers[vertex0].pos_pbc[2] - monomers[n2].pos_pbc[2];
+            product(bond1,bond0,faceNormal);
+            r[0] = monomers[n1].pos_pbc[0] - monomers[n2].pos_pbc[0];
+            r[1] = monomers[n1].pos_pbc[1] - monomers[n2].pos_pbc[1];
+            r[2] = monomers[n1].pos_pbc[2] - monomers[n2].pos_pbc[2];
+            
+            // Modification 20170818
+            //// consider the periodic image
+            //if(wall_flag < 3)    r[0] = n_image(r[0],maxsize[0]);
+            //if(wall_flag < 2)    r[2] = n_image(r[2],maxsize[2]);
+            //if(wall_flag < 1)    r[1] = n_image(r[1],maxsize[1]);
+            double b0 = iproduct(r,faceNormal);
+  //printf("faceLabel:%d\n",faceLabel);
+  //printf("(n2, vertex0, vertex1)=(%d, %d, %d)\n",n2,vertex0,vertex1);
+  //printf("n1=(%le, %le, %le)\n",monomers[n1].pos_pbc[0],monomers[n1].pos_pbc[1],monomers[n1].pos_pbc[2]);
+  //printf("n2=(%le, %le, %le)\n",monomers[n2].pos_pbc[0],monomers[n2].pos_pbc[1],monomers[n2].pos_pbc[2]);
+  //printf("vertex0=(%le, %le, %le)\n",monomers[vertex0].pos_pbc[0],monomers[vertex0].pos_pbc[1],monomers[vertex0].pos_pbc[2]);
+  //printf("vertex1=(%le, %le, %le)\n",monomers[vertex1].pos_pbc[0],monomers[vertex1].pos_pbc[1],monomers[vertex1].pos_pbc[2]);
+  
+            // Vertex positions at the next time step
+            double n1_pos_pbc[3], n2_pos_pbc[3], vertex1_pos_pbc[3], vertex0_pos_pbc[3]; 
             for(int d=0; d<3; d++)
             { 
-              n1_pos_pbc[d] = monomers[n1].pos_pbc[d] + monomers[n1].vel[d]*t_prime;
-              n2_pos_pbc[d] = monomers[n2].pos_pbc[d] + monomers[n2].vel[d]*t_prime;
-              vertex0_pos_pbc[d] = monomers[vertex0].pos_pbc[d] + monomers[vertex0].vel[d]*t_prime;
-              vertex1_pos_pbc[d] = monomers[vertex1].pos_pbc[d] + monomers[vertex1].vel[d]*t_prime;
-              g[d] = n1_pos_pbc[d]-n2_pos_pbc[d];
+              n1_pos_pbc[d] = monomers[n1].pos_pbc[d] + monomers[n1].vel[d]*dt;
+              n2_pos_pbc[d] = monomers[n2].pos_pbc[d] + monomers[n2].vel[d]*dt;
+              vertex0_pos_pbc[d] = monomers[vertex0].pos_pbc[d] + monomers[vertex0].vel[d]*dt;
+              vertex1_pos_pbc[d] = monomers[vertex1].pos_pbc[d] + monomers[vertex1].vel[d]*dt;
+              bond1[d] = vertex1_pos_pbc[d] - n2_pos_pbc[d];
+              bond0[d] = vertex0_pos_pbc[d] - n2_pos_pbc[d];
             }
-            // consider the periodic image
-            if(wall_flag < 3)    g[0] = n_image(g[0],maxsize[0]);
-            if(wall_flag < 2)    g[2] = n_image(g[2],maxsize[2]);
-            if(wall_flag < 1)    g[1] = n_image(g[1],maxsize[1]);
-
-            // check if n1 is within the face
-            double a1[3],a2[3];
-            a1[0] = vertex1_pos_pbc[0]-n2_pos_pbc[0];
-            a1[1] = vertex1_pos_pbc[1]-n2_pos_pbc[1];
-            a1[2] = vertex1_pos_pbc[2]-n2_pos_pbc[2];
-            a2[0] = vertex0_pos_pbc[0]-n2_pos_pbc[0];
-            a2[1] = vertex0_pos_pbc[1]-n2_pos_pbc[1];
-            a2[2] = vertex0_pos_pbc[2]-n2_pos_pbc[2];
-            double norm2_a1 = iproduct(a1,a1);
-            double norm2_a2 = iproduct(a2,a2);
-            double a1_dot_a2 = iproduct(a1,a2);
-            double a1_dot_a2_2 = a1_dot_a2 * a1_dot_a2;
-            double g_dot_a1 = iproduct(g,a1);
-            double g_dot_a2 = iproduct(g,a2);
-            double denominator = norm2_a1 * norm2_a2 - a1_dot_a2_2;      
-            double zeta = (g_dot_a1 * norm2_a2 - g_dot_a2 * a1_dot_a2) / denominator;
-            double xi =   (g_dot_a2 * norm2_a1 - g_dot_a1 * a1_dot_a2) / denominator; 
-            if(zeta >= 0. && xi >= 0. && (zeta+xi) <= 1.)
+            product(bond1,bond0,faceNormal);
+            r[0] = n1_pos_pbc[0] - n2_pos_pbc[0];//monomers[n2].pos_pbc[0];        
+            r[1] = n1_pos_pbc[1] - n2_pos_pbc[1];//monomers[n2].pos_pbc[1];        
+            r[2] = n1_pos_pbc[2] - n2_pos_pbc[2];//monomers[n2].pos_pbc[2];
+            // Modification 20170818 
+            //// consider periodic image
+            //if(wall_flag < 3)    r[0] = n_image(r[0],maxsize[0]);
+            //if(wall_flag < 2)    r[2] = n_image(r[2],maxsize[2]);
+            //if(wall_flag < 1)    r[1] = n_image(r[1],maxsize[1]);
+            double b1 = iproduct(r,faceNormal);
+  
+            if(b0*b1<=0.)      
             {
-              // update n1 position
-              double v_prime[3];  
+  //printf("b0=%le;  b1=%le\n",b0,b1);
+  //PAUSE
+              // predict the time at which the vertex bounds the face 
+              double t_prime = rtsafe(0.,1.,10e-4,monomers[n1],monomers[n2],
+                               monomers[vertex0],monomers[vertex1]);
+  // Modification 20170726: TEST
+  
+  //printf("t_prime=%le\n",t_prime);
+  
+              double g[3];
               for(int d=0; d<3; d++)
+              { 
+                n1_pos_pbc[d] = monomers[n1].pos_pbc[d] + monomers[n1].vel[d]*t_prime;
+                n2_pos_pbc[d] = monomers[n2].pos_pbc[d] + monomers[n2].vel[d]*t_prime;
+                vertex0_pos_pbc[d] = monomers[vertex0].pos_pbc[d] + 
+                                     monomers[vertex0].vel[d]*t_prime;
+                vertex1_pos_pbc[d] = monomers[vertex1].pos_pbc[d] + 
+                                     monomers[vertex1].vel[d]*t_prime;
+                g[d] = n1_pos_pbc[d]-n2_pos_pbc[d];
+              }
+              // Modification 20170818 
+              // consider the periodic image
+              //if(wall_flag < 3)    g[0] = n_image(g[0],maxsize[0]);
+              //if(wall_flag < 2)    g[2] = n_image(g[2],maxsize[2]);
+              //if(wall_flag < 1)    g[1] = n_image(g[1],maxsize[1]);
+  
+              // check if n1 is within the face
+              double a1[3],a2[3];
+              a1[0] = vertex1_pos_pbc[0]-n2_pos_pbc[0];
+              a1[1] = vertex1_pos_pbc[1]-n2_pos_pbc[1];
+              a1[2] = vertex1_pos_pbc[2]-n2_pos_pbc[2];
+              a2[0] = vertex0_pos_pbc[0]-n2_pos_pbc[0];
+              a2[1] = vertex0_pos_pbc[1]-n2_pos_pbc[1];
+              a2[2] = vertex0_pos_pbc[2]-n2_pos_pbc[2];
+              double norm2_a1 = iproduct(a1,a1);
+              double norm2_a2 = iproduct(a2,a2);
+              double a1_dot_a2 = iproduct(a1,a2);
+              double a1_dot_a2_2 = a1_dot_a2 * a1_dot_a2;
+              double g_dot_a1 = iproduct(g,a1);
+              double g_dot_a2 = iproduct(g,a2);
+              double denominator = norm2_a1 * norm2_a2 - a1_dot_a2_2;      
+              double zeta = (g_dot_a1 * norm2_a2 - g_dot_a2 * a1_dot_a2) / denominator;
+              double xi =   (g_dot_a2 * norm2_a1 - g_dot_a1 * a1_dot_a2) / denominator; 
+              if(zeta >= 0. && xi >= 0. && (zeta+xi) <= 1.)
               {
-                v_prime[d] = (1-zeta-xi)*monomers[n2].vel[d] + 
-                             zeta*monomers[vertex1].vel[d] + xi*monomers[vertex0].vel[d];
-                monomers[n1].vel[d] = 2*v_prime[d] - monomers[n1].vel[d];
-                monomers[n1].pos_pbc[d] = n1_pos_pbc[d] + (dt-t_prime)*monomers[n1].vel[d];
-                monomers[n1].pos[d] = box(monomers[n1].pos_pbc[d], maxsize[d]);
-                monomers[n1].vel_old[d] = monomers[n1].vel[d];
-              } 
-              // label n1
-              monomers[n1].updatedFlag=TRUE;
-
-//printf("t_prime=%le\n",t_prime);
-//PAUSE
-            }
-          }  
-        }        
+                // update n1 position
+                double v_prime[3];  
+                for(int d=0; d<3; d++)
+                {
+                  v_prime[d] = (1-zeta-xi)*monomers[n2].vel[d] + 
+                               zeta*monomers[vertex1].vel[d] + xi*monomers[vertex0].vel[d];
+                  monomers[n1].vel[d] = 2*v_prime[d] - monomers[n1].vel[d];
+                  monomers[n1].pos_pbc[d] = n1_pos_pbc[d] + (dt-t_prime)*monomers[n1].vel[d];
+                  monomers[n1].pos[d] = box(monomers[n1].pos_pbc[d], maxsize[d]);
+                  monomers[n1].vel_old[d] = monomers[n1].vel[d];
+                } 
+                // label n1
+                monomers[n1].updatedFlag=TRUE;
+  
+  //printf("t_prime=%le\n",t_prime);
+  //PAUSE 
+                // Modification 20170818
+                breakFlag=TRUE;
+                break;
+              }
+            }  
+          }        
+        }
       }
     }
   }
