@@ -412,10 +412,13 @@ void driver (char *work_dir)
 			tmp_p += size_z;
 		}
 	}
-  // Modification 20170420 
-  // Assign initial values to the distribution function. 
-  // The initial fluid velocity is choosen to be 0, and the initial density is choosen 
-  // to be 36.
+  /* Note 20170820 
+  -----------------
+  Assign initial values to the distribution function. 
+  The initial fluid velocity is choosen to be 0, and the initial density is choosen to be 
+  36. To freely assign a value for the fluid density variable fac[19] in lbe.h should be 
+  modified and the moving boundary condition in bnodes.c should be tooken care.
+  */
   double density = 36.0;
   for(i=1; i <= max_x; i++) {
     for(j=1; j <= max_y; j++) {
