@@ -1304,6 +1304,16 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
               force[i] = 24.0*(epsilon_LJ*(2.0*(aterm*aterm)-aterm)) * q12[i]/q12mag/q12mag;
               monomers[n1].force_interA[i] = force[i];            
             }
+            // Record force magnitude
+            if(q12mag < sphere_pm->eq_LJ) {
+              double magnitude = sqrt(iproduct(force,force));
+              forceR += magnitude; 
+              counterR++;
+            }
+            else {
+              forceA += sqrt(iproduct(force,force));
+              counterA++; 
+            }
           }
         }
         else if(sphere_pm->attrac_type == 2) // Morse potential
@@ -1495,12 +1505,12 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
   }
 
   // write shortest distance between vertices on different particles 
-  sprintf(fileName,"%s/data/shortestDis.dat",work_dir);
-  stream=fopen(fileName,"a");
-  for(int n=0; n<num_beads; n++)
-    fprintf(stream,"%f ",shortestDis[n]);
-  fprintf(stream,"\n");
-  fclose(stream);
+  //sprintf(fileName,"%s/data/shortestDis.dat",work_dir);
+  //stream=fopen(fileName,"a");
+  //for(int n=0; n<num_beads; n++)
+  //  fprintf(stream,"%f ",shortestDis[n]);
+  //fprintf(stream,"\n");
+  //fclose(stream);
 }
 
 void nonbonded_interaction_nlist(struct sphere_param *sphere_pm, struct monomer *monomers)

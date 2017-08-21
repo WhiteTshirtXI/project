@@ -1341,6 +1341,9 @@ void preclude_penetraction(struct sphere_param *sphere_pm, struct monomer *monom
   extern int max_x, max_y, max_z, wall_flag;
   double maxsize[3];
   maxsize[0]=max_x;  maxsize[1]=max_y;  maxsize[2]=max_z;
+  char filename[100];
+  FILE *stream;
+  extern char *work_dir;  
 
   int totalBead = sphere_pm->num_beads;
   for(int n1=0; n1 < totalBead; n1++) 
@@ -1442,8 +1445,9 @@ void preclude_penetraction(struct sphere_param *sphere_pm, struct monomer *monom
             {
   //printf("b0=%le;  b1=%le\n",b0,b1);
   //PAUSE
+  //Modification 20170820 1->1.5
               // predict the time at which the vertex bounds the face 
-              double t_prime = rtsafe(0.,1.,10e-4,monomers[n1],monomers[n2],
+              double t_prime = rtsafe(0.,1.5,10e-4,monomers[n1],monomers[n2],
                                monomers[vertex0],monomers[vertex1]);
   // Modification 20170726: TEST
   
@@ -1502,6 +1506,10 @@ void preclude_penetraction(struct sphere_param *sphere_pm, struct monomer *monom
   //PAUSE 
                 // Modification 20170818
                 breakFlag=TRUE;
+                sprintf(filename,"%s/data/t_prime.dat",work_dir);
+                stream=fopen(filename,"a");
+                fprintf(stream, "%f\n", t_prime);
+                fclose(stream);
                 break;
               }
             }  
