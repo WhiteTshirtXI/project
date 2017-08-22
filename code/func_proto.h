@@ -132,8 +132,7 @@ void WallStress(int step, struct vector wallVel, Float ***velcs_df, char *work_d
                 outputInterval);
 
 void WriteParticleStress(int step, int outputInterval, struct sphere_param *sphere_pm,
-     struct monomer *monomers, char *work_dir, double fluidStress_pre[6],
-     double fluidStress_pos[6]);
+     struct monomer *monomers, char *work_dir);
 
 void WriteBlist(struct sphere_param *sphere_pm, struct monomer *monomers, char *work_dir);
 void AssignBlist(struct sphere_param *sphere_pm, struct monomer *monomers, char *work_dir);

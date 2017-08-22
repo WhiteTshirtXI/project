@@ -333,12 +333,16 @@ if(n_step > 5000) // Modification 20170802: Temporary!!!
       WriteForce (n_step, sphere_pm, monomers, work_dir);
 
     get_forces (sphere_pm,monomers,faces,velcs_df,n_step,rngstream);
+
+    WriteParticleStress(n_step, writeInterval_stress, sphere_pm, monomers, work_dir);
+
     spreading (forceDen,monomers,sphere_pm->num_beads);
     bnodes_dp (node_map,sphere_pm,spheres,monomers); 
     // forceDen, u, f_neq(f_eq)
     // output the stress tensor
     collision (/*double tau*/1.0, velcs_df,forceDen,t_lbe);
     propagation (objects,node_map,velcs_df);
+
     interpolation (sphere_pm->num_beads,velcs_df,forceDen,t_lbe,monomers);
     preclude_penetraction (sphere_pm,monomers,faces,t_lbe);
     update_position (sphere_pm->num_beads,t_lbe,monomers);

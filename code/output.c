@@ -1396,112 +1396,110 @@ void WallStress(int step, struct vector wallVel, Float ***velcs_df, char *work_d
 }
 
 void WriteParticleStress(int step, int outputInterval, struct sphere_param *sphere_pm,
-		struct monomer *monomers, char *work_dir, double fluidStress_pre[6],
-		double fluidStress_pos[6])
+		 struct monomer *monomers, char *work_dir)
 {
 	if (step % outputInterval == 0)
 	{
-		extern int max_x;
-		extern int max_y;
-		extern int max_z;
+		extern int max_x, max_y, max_z;
 		double boxSize = max_x*max_y*max_z;
-		char fileName[300];
+		char fileName[200];
 		FILE *stream;
-		sprintf(fileName,"%s/data/pStressElement.dat", work_dir);
-		stream = fopen(fileName, "a");
 		int beadNum = sphere_pm->num_beads;
 		//double strain = shearRate * step;
-		double stress[3][3];
-    double stress_elas[3][3];
-    double stress_bend[3][3];
-    double stress_vol[3][3];
-    double stress_areaG[3][3];
-    double stress_wall[3][3];
-    double stress_int[3][3];
-    //double stress_v2[3][3];
+		double stress_elas[3][3], stress_bend[3][3], stress_vol[3][3], stress_areaG[3][3], 
+           stress_areaL[3][3], stress_wall[3][3], stress_inter_v1[3][3], 
+           stress_inter_v2[3][3], stressElastic[3][3], stressAll[3][3];
+
 		for(int i=0; i < DIMS; i++) {
 			for(int j=0; j < DIMS; j++) {
-				stress[i][j]=0.0;
-        //stress_v2[i][j]=0.0;
-        stress_elas[i][j]=0.;
-        stress_bend[i][j]=0.;
-        stress_vol[i][j]=0.;
-        stress_areaG[i][j]=0.;
+        stress_elas[i][j]=0.;  stress_bend[i][j]=0.;  stress_vol[i][j]=0.;
+        stress_areaG[i][j]=0.;  stress_areaL[i][j]=0.;
         stress_wall[i][j]=0.;
-        stress_int[i][j]=0.;
+        stress_inter_v1[i][j]=0.;  stress_inter_v2[i][j]=0.;
+        stressElastic[i][j]=0.;  stressAll[i][j]=0.;
       }
     }
 		for(int n=0; n < beadNum; n++) {
 			for(int i=0; i < DIMS; i++) {
 				for(int j=0; j < DIMS; j++) {
-          stress[i][j] += (monomers[n].stress[i][j] + monomers[n].stress_int_v1[i][j]);
-          //stress_v2[i][j] += (monomers[n].stress[i][j] + monomers[n].stress_int_v2[i][j]);
-          stress_elas[i][j] += monomers[n].stress_elas[i][j];
-          stress_bend[i][j] += monomers[n].stress_bend[i][j];
-          stress_vol[i][j] += monomers[n].stress_vol[i][j];
-          stress_areaG[i][j] += monomers[n].stress_areaG[i][j];
-          stress_wall[i][j] += monomers[n].stress_wall[i][j];
-          stress_int[i][j] += monomers[n].stress_int_v1[i][j];
+          stress_elas[i][j]   += monomers[n].stress_elas[i][j];
+          stress_bend[i][j]   += monomers[n].stress_bend[i][j];
+          stress_vol[i][j]    += monomers[n].stress_vol[i][j];
+          stress_areaG[i][j]  += monomers[n].stress_areaG[i][j];
+          stress_areaL[i][j]  += monomers[n].stress_areaL[i][j];    
+          stress_wall[i][j]   += monomers[n].stress_wall[i][j];
+          stress_inter_v1[i][j] += monomers[n].stress_int_v1[i][j];
+          stress_inter_v2[i][j] += monomers[n].stress_int_v2[i][j];
+
+          stressElastic[i][j] += monomers[n].pos[i] *
+                                 (monomers[n].force[j]-monomers[n].force_inter[j]);
+          stressAll[i][j] += monomers[n].pos[i]*monomers[n].force[j];
 				}
 			}
 		}
 		for(int i=0; i < DIMS; i++) {
 			for(int j=0; j < DIMS; j++) {
-				stress[i][j] /= (-boxSize);
-        //stress_v2[i][j] /= (-boxSize);
-        stress_elas[i][j] /= (-boxSize);
-        stress_bend[i][j] /= (-boxSize);
-        stress_vol[i][j] /= (-boxSize);
-        stress_areaG[i][j] /= (-boxSize);
-        stress_wall[i][j] /= (-boxSize);
-        stress_int[i][j] /= (-boxSize);
+        stress_elas[i][j]   /= (-boxSize);
+        stress_bend[i][j]   /= (-boxSize);
+        stress_vol[i][j]    /= (-boxSize);
+        stress_areaG[i][j]  /= (-boxSize);
+        stress_areaL[i][j]  /= (-boxSize);
+        stress_wall[i][j]   /= (-boxSize);
+        stress_inter_v1[i][j] /= (-boxSize);
+        stress_inter_v2[i][j] /= (-boxSize);
+        
+        stressElastic[i][j] /= (-boxSize);
+        stressAll[i][j]     /= (-boxSize);
       }
     }
+    double stress_v1[3][3], stress_v2[3][3];
+    for(int i=0; i<3; i++) {
+      for(int j=0; j<3; j++) {
+        stress_v1[i][j] = stressElastic[i][j] + stress_inter_v1[i][j];
+        stress_v2[i][j] = stressElastic[i][j] + stress_inter_v2[i][j];
+      }
+    }
+
+ 		sprintf(fileName,"%s/data/pStressElement.dat", work_dir);
+		stream = fopen(fileName, "a");
 		fprintf(stream, "%6d  ", step);
-		fprintf(stream, "%+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le\n",
-				stress[1][0], stress_elas[1][0], stress_bend[1][0], stress_vol[1][0], 
-        stress_areaG[1][0], stress_wall[1][0], stress_int[1][0]);
+		fprintf(stream, "%+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le\n",
+    stress_elas[1][0], stress_bend[1][0], stress_vol[1][0], stress_areaG[1][0], 
+    stress_areaL[1][0], stress_wall[1][0], stress_inter_v1[1][0], stress_inter_v2[1][0]);
 		fclose(stream);
-    
-    sprintf(fileName, "%s/data/pStressTensor.dat", work_dir);
+
+    sprintf(fileName, "%s/data/pStressV1.dat", work_dir);
     stream = fopen(fileName, "a");
     fprintf(stream, "%6d  ", step);
     fprintf(stream, "%+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le\n",
-        stress[0][0],stress[0][1],stress[0][2],stress[1][0],stress[1][1],stress[1][2],
-        stress[2][0],stress[2][1],stress[2][2]);
+        stress_v1[0][0],stress_v1[0][1],stress_v1[0][2],stress_v1[1][0],stress_v1[1][1],
+        stress_v1[1][2],stress_v1[2][0],stress_v1[2][1],stress_v1[2][2]);
     fclose(stream);
 
-    // posFluidStress is always zero 
-//		sprintf(fileName, "%s/data/preFluidStress.dat", work_dir);
-//		stream = fopen(fileName, "a");
-//		fprintf(stream, "%+.4le ", fluidStress_pre[0]);
-//		fprintf(stream, "%+.4le ", fluidStress_pre[1]);
-//		fprintf(stream, "%+.4le ", fluidStress_pre[2]);
-//		fprintf(stream, "%+.4le ", fluidStress_pre[3]);
-//		fprintf(stream, "%+.4le ", fluidStress_pre[4]);
-//		fprintf(stream, "%+.4le ", fluidStress_pre[5]);
-//		fprintf(stream, "\n");
-//		fclose(stream);
-//		sprintf(fileName, "%s/data/posFluidStress.dat", work_dir);
-//		stream = fopen(fileName, "a");
-//		fprintf(stream, "%+.4le ", fluidStress_pos[0]);
-//		fprintf(stream, "%+.4le ", fluidStress_pos[1]);
-//		fprintf(stream, "%+.4le ", fluidStress_pos[2]);
-//		fprintf(stream, "%+.4le ", fluidStress_pos[3]);
-//		fprintf(stream, "%+.4le ", fluidStress_pos[4]);
-//		fprintf(stream, "%+.4le ", fluidStress_pos[5]);
-//		fprintf(stream, "\n");
-//		fclose(stream);
-		//sprintf(fileName, "%s/data/fluidStress.dat", work_dir);
-		//stream = fopen(fileName, "a");
-		//fprintf(stream, "%+.4le ", (fluidStress_pre[0] + fluidStress_pos[0])/boxSize);
-		//fprintf(stream, "%+.4le ", (fluidStress_pre[1] + fluidStress_pos[1])/boxSize);
-		//fprintf(stream, "%+.4le ", (fluidStress_pre[2] + fluidStress_pos[2])/boxSize);
-		//fprintf(stream, "%+.4le ", (fluidStress_pre[3] + fluidStress_pos[3])/boxSize);
-		//fprintf(stream, "%+.4le ", (fluidStress_pre[4] + fluidStress_pos[4])/boxSize);
-		//fprintf(stream, "%+.4le ", (fluidStress_pre[5] + fluidStress_pos[5])/boxSize);
-		//fprintf(stream, "\n");
-		//fclose(stream);
+    sprintf(fileName, "%s/data/pStressV2.dat", work_dir);
+    stream = fopen(fileName, "a");
+    fprintf(stream, "%6d  ", step);
+    fprintf(stream, "%+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le\n",
+        stress_v2[0][0],stress_v2[0][1],stress_v2[0][2],stress_v2[1][0],stress_v2[1][1],
+        stress_v2[1][2],stress_v2[2][0],stress_v2[2][1],stress_v2[2][2]);
+    fclose(stream);
+
+    sprintf(fileName, "%s/data/pStressAll.dat", work_dir);
+    stream = fopen(fileName, "a");
+    fprintf(stream, "%6d  ", step);
+    fprintf(stream, "%+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le\n",
+        stressAll[0][0],stressAll[0][1],stressAll[0][2],stressAll[1][0],stressAll[1][1],
+        stressAll[1][2],stressAll[2][0],stressAll[2][1],stressAll[2][2]);
+    fclose(stream);
+
+    sprintf(fileName, "%s/data/pStressElas.dat", work_dir);
+    stream = fopen(fileName, "a");
+    fprintf(stream, "%6d  ", step);
+    fprintf(stream, "%+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le    %+.4le\n",
+        stressElastic[0][0],stressElastic[0][1],stressElastic[0][2],stressElastic[1][0],stressElastic[1][1],
+        stressElastic[1][2],stressElastic[2][0],stressElastic[2][1],stressElastic[2][2]);
+    fclose(stream);
+
 	}
 }
 

@@ -167,16 +167,6 @@ void get_forces(struct sphere_param *sphere_pm, struct monomer *monomers, struct
 		broad_cast(monomers[n1].force, DIMS, 0);
 		broad_cast(monomers[n1].fluid_vel, DIMS, 0);
 	}
-
-	// Calculate particle stress. The contribution from inter-particle
-	// interaction is calculated in 'ev_force' function.
-	//ParticleStress (sphere_pm, monomers);
-  for(int n=0; n < num_beads; n++)
-    for(i=0; i < DIMS; i++)
-      for(j=0; j < DIMS; j++)
-        monomers[n].stress[i][j] += ( monomers[n].stress_elas[i][j] + 
-        monomers[n].stress_bend[i][j] + monomers[n].stress_vol[i][j] + 
-        monomers[n].stress_areaG[i][j] + monomers[n].stress_wall[i][j] );
 }
 
 void get_force_growth(struct sphere_param *sphere_pm, struct monomer *monomers, struct face 
@@ -622,6 +612,12 @@ void spring_force(struct sphere_param *sphere_pm, struct monomer *monomers, stru
           monomers[n1].force_spring[d] -= force[d];
           monomers[n2].force_spring[d] += force[d];
         }
+        /* Note 20170821
+        -----------------
+        The fluid stretches n1, so a restoring force, here -force[n], will act on n1, and 
+        the force also spreads to the surrounding fluid. In other words, the force is 
+        exerted by n1 on the fluid.
+        */
         for(int m=0; m < DIMS; m++) {
           for(int n=0; n < DIMS; n++) {
             monomers[n1].stress_elas[m][n] -= monomers[n1].pos[m]*force[n];
@@ -639,7 +635,8 @@ void spring_force(struct sphere_param *sphere_pm, struct monomer *monomers, stru
         double factor;
         double term11[DIMS], term12[DIMS], term21[DIMS], term22[DIMS], term3[DIMS], term4[DIMS];
         double f1[DIMS], f2[DIMS], f3[DIMS], f4[DIMS];
-        double kBend = 2./sqrt(3)*k_bend[0];//sphere_pm->kBend; // convert k_c to k_b. temporary setting
+        // Note 20170821: Convert k_c to k_b. Temporary setting
+        double kBend = 2./sqrt(3)*k_bend[0]; 
         double theta0; 
         //if(nlevel[0]==2 || nlevel[0]==-1)   
         //  //theta0 = 0.2171;//sphere_pm->theta0; only temporary setting
@@ -1262,7 +1259,7 @@ void ev_force_nlist(Float radius, struct sphere_param *sphere_pm, struct monomer
         double q12[3], q12mag=0., force[3]={0.};    
 			  // calculate the monomer-monomer distance
 			  for(int j=0; j < DIMS; j++) {
-				  q12[j] = monomers[n1].pos_pbc[j] - monomers[monomers[n1].list[neighbor]].pos_pbc[j];
+				  q12[j] = monomers[n1].pos_pbc[j] - monomers[n2].pos_pbc[j];
 				  if((j==0 && wall_flag<3) || (j==2 && wall_flag<2) || (j==1 && wall_flag<1)) {
 					  q12[j] = n_image(q12[j], maxsize[j]); 
           }
@@ -2009,8 +2006,8 @@ void ParticleStress(struct sphere_param *sphere_pm, struct monomer *monomers)
 	for(int n=0; n < numBead; n++) {
 		for(int i=0; i < DIMS; i++) {
 			for(int j=0; j < DIMS; j++) {
-				monomers[n].stress[i][j] += -1. * monomers[n].pos[i] *
-        (monomers[n].force[j]- monomers[n].force_pp[j] - monomers[n].drag[j]);
+		    monomers[n].stress[i][j] =  monomers[n].pos[i] *
+        (monomers[n].force[j]- monomers[n].force_inter[j]);
 			}
 		}
 	}
