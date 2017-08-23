@@ -543,55 +543,54 @@ void lbe_zcol(Float **velcz_df, int *node_map, struct vector f_ext, double sum_z
 //}
 
 // Modification 20170410
-void equilibrium_distrib(int xy, int z, double ***velcs_df, struct vector *uncorrectedVel,
-     double *f_eq)
+void equilibrium_distrib(int xy, int z, double ***velcs_df, double dt,
+     struct vector forceDen,  struct vector *correctedVel, double *f_eq)
 {
   double density = 0.;
-  uncorrectedVel->x = 0.;
-  uncorrectedVel->y = 0.;
-  uncorrectedVel->z = 0.;
+  correctedVel->x = 0.;
+  correctedVel->y = 0.;
+  correctedVel->z = 0.;
   
   for(int q=0; q < 19; q++) {
     density += velcs_df[xy][q][z];
-    uncorrectedVel->x += velcs_df[xy][q][z]*c_x[q];
-    uncorrectedVel->y += velcs_df[xy][q][z]*c_y[q];
-    uncorrectedVel->z += velcs_df[xy][q][z]*c_z[q];
+    correctedVel->x += velcs_df[xy][q][z]*c_x[q];
+    correctedVel->y += velcs_df[xy][q][z]*c_y[q];
+    correctedVel->z += velcs_df[xy][q][z]*c_z[q];
   }
-//  density += 36.0;
-  uncorrectedVel->x /= density;
-  uncorrectedVel->y /= density;
-  uncorrectedVel->z /= density;
-  
+  // density += 36.0;
   //printf("density=%f\n",density);
-
-  double term3 = (uncorrectedVel->x * uncorrectedVel->x + 
-                  uncorrectedVel->y * uncorrectedVel->y + 
-                  uncorrectedVel->z * uncorrectedVel->z)*1.5;
+  correctedVel->x += 0.5*dt*forceDen.x;
+  correctedVel->y += 0.5*dt*forceDen.y;
+  correctedVel->z += 0.5*dt*forceDen.z;
+  correctedVel->x /= density;
+  correctedVel->y /= density;
+  correctedVel->z /= density;
+    
+  double term3 = (correctedVel->x*correctedVel->x + correctedVel->y*correctedVel->y + 
+                  correctedVel->z*correctedVel->z)*1.5;
   // distribution
   for(int q=0; q < 19; q++)
   {
-    //double term1 = (c_x[q]*velocity.x + c_y[q]*vel.y + c_z[q]*vel.z) / CS2;
-    double term1 = (c_x[q] * uncorrectedVel->x + c_y[q] * uncorrectedVel->y + 
-                    c_z[q] * uncorrectedVel->z)*3.;
+    double term1 = (c_x[q] * correctedVel->x + c_y[q] * correctedVel->y + 
+                    c_z[q] * correctedVel->z)*3.;
     double term2 = 0.5*term1*term1;
     f_eq[q] = weight[q]*density*(1 + term1 + term2 - term3); 
-//printf("f_eq[%d]=%f\n",q,f_eq[q]);
   }  
-//PAUSE
 }
 
-void external_force(double tau, struct vector forceDen, struct vector uncorrectedVel, double *f_ext) 
+void external_force(double tau, struct vector forceDen, struct vector correctedVel, 
+     double *f_ext) 
 {
 //  double f_ext;
   double prefactor = 1 - 1. / (2*tau);
   double CS4 = CS2*CS2;
   for(int q = 0; q < 19; q++) {
     double term1 = c_x[q] * forceDen.x + c_y[q] * forceDen.y + c_z[q] * forceDen.z;
-    double term2 = uncorrectedVel.x*forceDen.x + uncorrectedVel.y*forceDen.y + 
-                   uncorrectedVel.z*forceDen.z;
-    double term3 = c_x[q]*uncorrectedVel.x + c_y[q]*uncorrectedVel.y + 
-                   c_z[q]*uncorrectedVel.z;
-    f_ext[q] = prefactor * weight[q] * ( (term1 - term2) / CS2 + (term3 * term1 / CS4) );
+    double term2 = correctedVel.x*forceDen.x + correctedVel.y*forceDen.y + 
+                   correctedVel.z*forceDen.z;
+    double term3 = c_x[q]*correctedVel.x + c_y[q]*correctedVel.y + 
+                   c_z[q]*correctedVel.z;
+    f_ext[q] = prefactor*weight[q]*((term1-term2)/CS2 + (term3*term1/CS4));
   }
 //  return f_ext;
 }
@@ -601,24 +600,35 @@ void collision(double tau, double ***velcs_df, struct vector **forceDen, double 
 {
   int max_y_plus_2 = max_y+2;
   double tau_inverse = 1. / tau;
-  //double tau_inverse = 1.;
   for(int x=1; x <= max_x; x++) {
     for(int y=1; y <= max_y; y++) {
       int xy = x*(max_y_plus_2)+y;
       for(int z=1; z <= max_z; z++) {
-        struct vector uncorrectedVel;
+        struct vector correctedVel;
         double f_eq[19];
         double f_ext[19];
-        equilibrium_distrib(xy, z, velcs_df, &uncorrectedVel, f_eq);
-        external_force(tau, forceDen[xy][z], uncorrectedVel, f_ext); 
+        // because the structure of velcs_df, I can't use velcs_df[xy][z] as a parameter.
+        equilibrium_distrib(xy, z, velcs_df, dt, forceDen[xy][z], &correctedVel, f_eq);
+        external_force(tau, forceDen[xy][z], correctedVel, f_ext); 
         for(int q=0; q < 19; q++) {
-          //printf("f_ext[%d]=%f\n", q, f_ext[q]);
           velcs_df[xy][q][z] = velcs_df[xy][q][z] + tau_inverse * 
                                (f_eq[q] - velcs_df[xy][q][z]) + f_ext[q]*dt;
         }
+        // if(TURE)
+        // fneq(x,y,z) u(x,y,z) forceDen(x,y,z)
+        // for(int q=0; q<19; q++)
+        // {
+        //   +=fneq[xy][q][z]*c_y[q]*c_x[q];
+        //   +=fneq[xy][q][z]*c_x[q]*c_y[q];
+        //   +=fneq[xy][q][z]*c_x[q]*c_x[q];
+        // }
+        // *= -(1-0.5*dt/tau);
+        // -=0.5*dt*(1-0.5*dt/tau)*(forceDen[xy][z].y*u.x+u.y*forceDen[xy][z].x);
       }
     }
   }
+  // if(TRUE) 
+  // volume average
 }
 
 void propagation(struct object *objects, int ** node_map, Float ***velcs_df)
