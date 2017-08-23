@@ -159,7 +159,7 @@ void spreading           (struct vector **forceDen, struct monomer *mon, int num
 void interpolation       (int num_beads, Float ***velcs_df, struct vector **forceDen, double dt, struct monomer *mon);
 void equilibrium_distrib (int xy, int z, double ***velcs_df, double dt, struct vector forceDen, struct vector *correctedVel, double *f_eq);
 void external_force      (double tau, struct vector forceDen, struct vector correctedVel, double *f_ext);
-void collision           (double tau, double ***velcs_df, struct vector **forceDen, double dt);
+void collision (double tau, double ***velcs_df, struct vector **forceDen, double dt, int step, int writeInterval);
 double adams_bashforth   (double y, double derivOld, double derivNew, double dt);
 double euler_method      (double y, double deriv, double dt);
 void update_position     (int numBead, double dt, struct monomer *mon);

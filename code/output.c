@@ -1347,9 +1347,7 @@ void WallStress(int step, struct vector wallVel, Float ***velcs_df, char *work_d
 
 	if(step % outputInterval == 0)
 	{
-		extern int max_x;
-		extern int max_y;
-		extern int max_z;
+		extern int max_x, max_y, max_z;
 		double wallArea = max_x*max_z;  //
 		double sigmaYX = 0.;
 		double viscosity = 0.0;
@@ -1367,9 +1365,9 @@ void WallStress(int step, struct vector wallVel, Float ***velcs_df, char *work_d
 				int xy = x * (max_y+2) + max_y;
 
 				double fluidDensity = Rho_Fl;
-				for(int n=0; n < Num_Dir; n++) {
-					fluidDensity += velcs_df[xy][n][z];
-				}
+//				for(int n=0; n < Num_Dir; n++) {
+//					fluidDensity += velcs_df[xy][n][z];
+//				}
 				for(int n=0; n < Num_Dir_X; n++) {  // the components hitting the top wall
 					int compon = y_p[n];
 					double weighting = fac[compon] / 36.0;

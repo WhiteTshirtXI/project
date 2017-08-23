@@ -149,15 +149,13 @@ void n_list (struct object *objects)
 
 void n_list_mon(struct sphere_param *sphere_pm, struct monomer *mon)
 {
-	extern int  max_x, max_y, max_z;
-	extern int  wall_flag;
+	extern int  max_x, max_y, max_z, wall_flag;
 	static int  cell_list[MAX_L][MAX_N+1], flag=0;
 	double x12, y12, z12, r12, r_max, sig, cut;
 	int nlx, nly, nlz;
 	int lx1, ly1, lz1, l1, n1, lx2, ly2, lz2, l2, n2;
 	int n1_sph, n2_sph;
-	int num_beads;
-	num_beads = sphere_pm->num_beads;
+	int num_beads = sphere_pm->num_beads;
 
 	for(n1_sph = 0, r_max = 0.0; n1_sph < num_beads; n1_sph++) {  // Largest radius
 		r_max = max(r_max, mon[n1_sph].radius);
@@ -173,8 +171,8 @@ void n_list_mon(struct sphere_param *sphere_pm, struct monomer *mon)
 	//  Calculate neighbor lists
 	if(min(nlx, min(nly, nlz)) < 3)  // Too few cells: use direct sum 
 	{
-		for (n1_sph = 1; n1_sph < num_beads; n1_sph++) {
-			for (n2_sph = 0; n2_sph < n1_sph;  n2_sph++)
+		for(n1_sph = 1; n1_sph < num_beads; n1_sph++) {
+			for(n2_sph = 0; n2_sph < n1_sph;  n2_sph++)
 			{
 				x12 = n_image(mon[n1_sph].pos[0] - mon[n2_sph].pos[0], max_x);
 				y12 = n_image(mon[n1_sph].pos[1] - mon[n2_sph].pos[1], max_y);
@@ -182,14 +180,14 @@ void n_list_mon(struct sphere_param *sphere_pm, struct monomer *mon)
 				r12 = x12*x12 + y12*y12 + z12*z12;
 				sig = (mon[n1_sph].radius + mon[n2_sph].radius)/2.0;
 				cut = sig*sphere_pm->evcutoff;
-				if (r12 <= cut*cut)
+				if(r12 <= cut*cut)
 				{
 					mon[n1_sph].list[0]++;
 					mon[n2_sph].list[0]++;
-					if (mon[n1_sph].list[0] > MAX_N)
-						fatal_err("too many neighbors", MAX_N);
-					if (mon[n2_sph].list[0] > MAX_N)
-						fatal_err("too many neighbors", MAX_N);
+					if(mon[n1_sph].list[0] > MAX_N)
+					  fatal_err("too many neighbors", MAX_N);
+					if(mon[n2_sph].list[0] > MAX_N)
+					  fatal_err("too many neighbors", MAX_N);
 					mon[n1_sph].list[mon[n1_sph].list[0]] = n2_sph;
 					mon[n2_sph].list[mon[n2_sph].list[0]] = n1_sph;
 				}
@@ -253,7 +251,7 @@ void n_list_mon(struct sphere_param *sphere_pm, struct monomer *mon)
 											sig = (mon[n1_sph].radius+mon[n2_sph].radius)/2.0;
 											//cut = 2.3;
                       //cut=3.8;
-                      cut=2.;
+                      cut=3.;
 //                      cut = (sphere_pm->cutoff_LJ+0.5) * sphere_pm->range_LJ; 
                       //cut = 3.;  //20170802
 											//if(r12 <= cut*cut)  // Modification 20170318!!!

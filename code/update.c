@@ -275,23 +275,21 @@ extern int growthStep; // Modification 20170712
   //    }
   //  }
   //}
-
+  //
   // Modification 20170712
   for(n_step=0; n_step <=growthStep; n_step++)
     growth_procedure_2(n_step, growthStep, sphere_pm, monomers, objects, 
-                     n_cycle, num_step, mark_interval, oscillation_period, window, spheres,
-                     faces, velcs_df, node_map, work_dir, rngstream);
+                       n_cycle, num_step, mark_interval, oscillation_period, window, spheres,
+                       faces, velcs_df, node_map, work_dir, rngstream);
     //growth_procedure(n_step, /*int totalGrowthStep*/7000, sphere_pm, monomers, objects, 
     //                 n_cycle, num_step, mark_interval, oscillation_period, window, spheres,
     //                 faces, velcs_df, node_map, work_dir, rngstream);
-//exit(0);
+    //exit(0);
 
   extern double t_lbe;
   // Loop over 1 cycle of num_step 
 	for(n_step = 0; n_step <= num_step; n_step++)
 	{ 
-if(n_step > 5000) // Modification 20170802: Temporary!!!
-  sphere_pm->attrac_type = sphere_pm->attrac_type_1;
 
     double dr2_temp=0.0;
     double dr2[2]={0.0, 0.0};
@@ -338,7 +336,10 @@ if(n_step > 5000) // Modification 20170802: Temporary!!!
     spreading (forceDen,monomers,sphere_pm->num_beads);
     bnodes_dp (node_map,sphere_pm,spheres,monomers); 
     // it's economical to calculate fluid stress in collision funcition
-    collision (/*double tau*/1.0, velcs_df,forceDen,t_lbe);     
+    collision (/*double tau*/1.0, velcs_df,forceDen,t_lbe,n_step,writeInterval_stress);     
+   
+    WallStress(n_step,objects[num_sph+1].u,velcs_df,work_dir,writeInterval_stress);
+
     propagation (objects,node_map,velcs_df);
 
     interpolation (sphere_pm->num_beads,velcs_df,forceDen,t_lbe,monomers);

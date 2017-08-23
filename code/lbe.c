@@ -596,39 +596,69 @@ void external_force(double tau, struct vector forceDen, struct vector correctedV
 }
 
 // Modification 20170410
-void collision(double tau, double ***velcs_df, struct vector **forceDen, double dt)
+void collision(double tau, double ***velcs_df, struct vector **forceDen, double dt, 
+     int step, int writeInterval)
 {
   int max_y_plus_2 = max_y+2;
   double tau_inverse = 1. / tau;
+  double factor = -1 + dt/(2*tau);
+  double sigma_yx=0., sigma_xx=0., sigma_yy=0., sigma_zz=0.;
+  double correc_yx=0., correc_xx=0., correc_yy=0., correc_zz=0.;
+  char filename[200];
+  FILE *stream;   
+  extern char *work_dir;
+
   for(int x=1; x <= max_x; x++) {
     for(int y=1; y <= max_y; y++) {
       int xy = x*(max_y_plus_2)+y;
-      for(int z=1; z <= max_z; z++) {
+      for(int z=1; z <= max_z; z++) 
+      {
         struct vector correctedVel;
-        double f_eq[19];
-        double f_ext[19];
-        // because the structure of velcs_df, I can't use velcs_df[xy][z] as a parameter.
+        double f_eq[19], f_neq[19], f_ext[19];
+        // because of the structure of velcs_df, I can't use velcs_df[xy][z] as a parameter.
         equilibrium_distrib(xy, z, velcs_df, dt, forceDen[xy][z], &correctedVel, f_eq);
         external_force(tau, forceDen[xy][z], correctedVel, f_ext); 
         for(int q=0; q < 19; q++) {
-          velcs_df[xy][q][z] = velcs_df[xy][q][z] + tau_inverse * 
-                               (f_eq[q] - velcs_df[xy][q][z]) + f_ext[q]*dt;
+          f_neq[q] = velcs_df[xy][q][z]-f_eq[q];
+          velcs_df[xy][q][z] = velcs_df[xy][q][z] - tau_inverse*f_neq[q] + f_ext[q]*dt;
         }
-        // if(TURE)
-        // fneq(x,y,z) u(x,y,z) forceDen(x,y,z)
-        // for(int q=0; q<19; q++)
-        // {
-        //   +=fneq[xy][q][z]*c_y[q]*c_x[q];
-        //   +=fneq[xy][q][z]*c_x[q]*c_y[q];
-        //   +=fneq[xy][q][z]*c_x[q]*c_x[q];
-        // }
-        // *= -(1-0.5*dt/tau);
-        // -=0.5*dt*(1-0.5*dt/tau)*(forceDen[xy][z].y*u.x+u.y*forceDen[xy][z].x);
+        if(writeInterval !=0 && step % writeInterval==0)
+        {
+          for(int q=0; q<19; q++)
+          {
+            sigma_yx += f_neq[q]*c_y[q]*c_x[q];
+            sigma_xx += f_neq[q]*c_x[q]*c_x[q];
+            sigma_yy += f_neq[q]*c_y[q]*c_y[q];
+            sigma_zz += f_neq[q]*c_z[q]*c_z[q];
+          }
+          correc_yx += (forceDen[xy][z].y*correctedVel.x + correctedVel.y*forceDen[xy][z].x);
+          correc_xx += (2*forceDen[xy][z].x*correctedVel.x);
+          correc_yy += (2*forceDen[xy][z].y*correctedVel.y);
+          correc_zz += (2*forceDen[xy][z].z*correctedVel.z);    
+        } 
       }
     }
   }
-  // if(TRUE) 
-  // volume average
+  if(writeInterval !=0 && step % writeInterval==0)
+  {
+    sprintf(filename,"%s/data/fludStress.dat",work_dir);
+    stream = fopen(filename,"a");
+
+    sigma_yx *= factor;  sigma_xx *= factor;  sigma_yy *= factor;  sigma_zz *= factor;
+    
+    correc_yx *= 0.5*dt*factor;  correc_xx *= 0.5*dt*factor;  correc_yy *= 0.5*dt*factor;  
+    correc_zz *= 0.5*dt*factor;
+  
+    sigma_yx += correc_yx;  sigma_xx += correc_xx;  sigma_yy += correc_yy;  
+    sigma_zz += correc_zz;
+  
+    sigma_yx /= (max_x*max_y*max_z);  sigma_xx /= (max_x*max_y*max_z); 
+    sigma_yy /= (max_x*max_y*max_z);  sigma_zz /= (max_x*max_y*max_z);
+
+    fprintf(stream,"%d    %.4le  %.4le  %.4le  %.4le\n",
+    step,sigma_yx,sigma_xx,sigma_yy,sigma_zz);
+    fclose(stream);
+  }
 }
 
 void propagation(struct object *objects, int ** node_map, Float ***velcs_df)
